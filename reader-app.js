@@ -108,6 +108,57 @@ function resetProgress() {
   }
 }
 
+// ============ Display Preferences ============
+
+const DISPLAY_PREFS_KEY = 'tokiPonaDisplayPrefs';
+
+function loadDisplayPreferences() {
+  try {
+    const saved = localStorage.getItem(DISPLAY_PREFS_KEY);
+    if (saved) {
+      const prefs = JSON.parse(saved);
+      return {
+        showLatin: prefs.showLatin !== undefined ? prefs.showLatin : true,
+        showEnglish: prefs.showEnglish !== undefined ? prefs.showEnglish : false,
+        useCompounds: prefs.useCompounds !== undefined ? prefs.useCompounds : false
+      };
+    }
+  } catch (e) {
+    console.warn('Could not load display preferences:', e);
+  }
+  // Default values
+  return { showLatin: true, showEnglish: false, useCompounds: false };
+}
+
+function saveDisplayPreferences() {
+  try {
+    localStorage.setItem(DISPLAY_PREFS_KEY, JSON.stringify({
+      showLatin,
+      showEnglish,
+      useCompounds
+    }));
+  } catch (e) {
+    console.warn('Could not save display preferences:', e);
+  }
+}
+
+function initializeDisplayModes() {
+  // Load saved preferences
+  const prefs = loadDisplayPreferences();
+  showLatin = prefs.showLatin;
+  showEnglish = prefs.showEnglish;
+  useCompounds = prefs.useCompounds;
+  
+  // Set checkbox states to match
+  document.getElementById('showLatin').checked = showLatin;
+  document.getElementById('showEnglish').checked = showEnglish;
+  document.getElementById('useCompounds').checked = useCompounds;
+  
+  // Apply body classes based on current state
+  document.body.classList.toggle('show-latin', showLatin);
+  document.body.classList.toggle('show-english', showEnglish);
+}
+
 function showCompletionToast(lessonId) {
   const toast = document.createElement('div');
   toast.className = 'completion-toast';
@@ -244,13 +295,13 @@ function renderReadingPassage(passage) {
   const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="passage-card">
-      <div class="passage-title">${passage.title}</div>
-      <div class="passage-meta">${passage.source}</div>
+      <div class="always-visible passage-title">${passage.title}</div>
+      <div class="always-visible passage-meta">${passage.source}</div>
       ${passage.lines.map(line => `
-        <div class="line flashcard ${showEnglish ? 'show-all' : ''}" onclick="this.classList.toggle('flipped'); event.stopPropagation()">
-          <div class="sp-passage">${renderFn(line.tp)}</div>
-          <div class="tp-text ${showLatin ? '' : 'hidden'}">${line.tp}</div>
-          <div class="en-text">${line.en}</div>
+        <div class="line flashcard" onclick="this.classList.toggle('flipped'); event.stopPropagation()">
+          <div class="sp-content sp-passage">${renderFn(line.tp)}</div>
+          <div class="tp-latin">${line.tp}</div>
+          <div class="tp-english">${line.en}</div>
           <p class="flip-hint">tap to reveal</p>
         </div>
       `).join('')}
@@ -308,9 +359,9 @@ function renderProverbCard(proverb) {
   const translation = proverb.note || proverb.en;
   
   return `
-    <div class="sp-proverb">${renderFn(proverb.tp)}</div>
-    <div class="tp-proverb ${showLatin ? '' : 'hidden'}">${proverb.tp}</div>
-    <div class="en-proverb">${translation}</div>
+    <div class="sp-content sp-proverb">${renderFn(proverb.tp)}</div>
+    <div class="tp-latin">${proverb.tp}</div>
+    <div class="tp-english">${translation}</div>
   `;
 }
 
@@ -388,14 +439,14 @@ function renderExpandedVocab(vocab) {
   return vocab.map(v => `
     <div class="vocab-card-expanded">
       <div class="vocab-header">
-        <span class="sp-glyph-large">${toSP(v.word)}</span>
+        <span class="sp-content sp-glyph-large">${toSP(v.word)}</span>
         <div class="vocab-title-block">
-          <div class="vocab-word">${v.word}</div>
-          <div class="vocab-primary">${v.primaryMeaning}</div>
+          <div class="vocab-word-always">${v.word}</div>
+          <div class="always-visible vocab-primary">${v.primaryMeaning}</div>
         </div>
       </div>
       
-      <div class="vocab-roles">
+      <div class="always-visible vocab-roles">
         ${Object.entries(v.roles).map(([role, meaning]) => `
           <div class="role-item">
             <span class="role-tag">${formatRoleName(role)}</span>
@@ -404,14 +455,14 @@ function renderExpandedVocab(vocab) {
         `).join('')}
       </div>
       
-      ${v.notes ? `<div class="vocab-notes">💡 ${v.notes}</div>` : ''}
+      ${v.notes ? `<div class="always-visible vocab-notes">💡 ${v.notes}</div>` : ''}
       
       ${v.compounds ? `
         <div class="vocab-compounds">
           ${v.compounds.map(c => `
             <span class="compound-chip">
-              <span class="compound-tp">${c.tp}</span>
-              <span class="compound-en">${c.en}</span>
+              <span class="always-visible compound-tp">${c.tp}</span>
+              <span class="always-visible compound-en">${c.en}</span>
             </span>
           `).join('')}
         </div>
@@ -497,14 +548,14 @@ function renderSentenceList(sentenceList, renderFn) {
   return `<div class="sentence-grid">${sentenceList.map(s => `
     <div class="sentence-card-expanded flashcard" onclick="this.classList.toggle('flipped')">
       <div class="card-front">
-        <div class="sp-sentence">${renderFn(s.tp)}</div>
-        <div class="sentence-latin">${s.tp}</div>
-        ${s.gloss ? `<div class="sentence-gloss">${s.gloss}</div>` : ''}
+        <div class="sp-content sp-sentence">${renderFn(s.tp)}</div>
+        <div class="tp-latin sentence-latin">${s.tp}</div>
+        ${s.gloss ? `<div class="always-visible sentence-gloss">${s.gloss}</div>` : ''}
         <div class="flip-hint">tap to reveal</div>
       </div>
       <div class="card-back">
-        <div class="sentence-english">${s.en}</div>
-        ${s.note ? `<div class="sentence-note">💡 ${s.note}</div>` : ''}
+        <div class="tp-english sentence-english">${s.en}</div>
+        ${s.note ? `<div class="always-visible sentence-note">💡 ${s.note}</div>` : ''}
       </div>
     </div>
   `).join('')}</div>`;
@@ -514,19 +565,19 @@ function renderAmbiguousSentences(sentenceList, renderFn) {
   return `<div class="sentence-grid">${sentenceList.map(s => `
     <div class="sentence-card-ambiguous flashcard" onclick="this.classList.toggle('flipped')">
       <div class="card-front">
-        <div class="sp-sentence">${renderFn(s.tp)}</div>
-        <div class="sentence-latin">${s.tp}</div>
-        <div class="ambig-prompt">How many meanings?</div>
+        <div class="sp-content sp-sentence">${renderFn(s.tp)}</div>
+        <div class="tp-latin sentence-latin">${s.tp}</div>
+        <div class="always-visible ambig-prompt">How many meanings?</div>
         <div class="flip-hint">tap to reveal</div>
       </div>
       <div class="card-back">
-        <div class="meanings-list">
+        <div class="tp-english meanings-list">
           ${s.meanings.map((m, i) => `<div class="meaning-item">${i + 1}. ${m}</div>`).join('')}
         </div>
-        <div class="likely-meaning">
+        <div class="tp-english likely-meaning">
           <strong>Most likely:</strong> ${s.likely}
         </div>
-        ${s.note ? `<div class="sentence-note">💡 ${s.note}</div>` : ''}
+        ${s.note ? `<div class="always-visible sentence-note">💡 ${s.note}</div>` : ''}
       </div>
     </div>
   `).join('')}</div>`;
@@ -630,12 +681,13 @@ function renderExercise(exercise, index) {
 
 // Generic fallback renderer for unknown exercise types
 function renderGenericExercise(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">📝 Exercise</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction || 'Complete the exercise:'}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction || 'Complete the exercise:'}</p>
       <div class="generic-exercise">
         ${exercise.questions ? exercise.questions.map((q, qi) => {
           // Handle various question formats
@@ -643,14 +695,20 @@ function renderGenericExercise(exercise, index) {
           const hintText = q.hint || q.context || q.scenario || q.greeting || q.command || '';
           const answerText = q.answer || (typeof q.correct === 'string' ? q.correct : (typeof q.correct === 'number' && q.options ? q.options[q.correct] : '')) || '';
           const explanationText = q.explanation || '';
+          const hasTp = q.tp;
           
           // For multiple choice questions with options
           if (q.options && Array.isArray(q.options)) {
             const correctIndex = typeof q.correct === 'number' ? q.correct : -1;
             return `
               <div class="generic-mc-card" data-correct="${correctIndex}">
-                <div class="generic-question-text">${questionText}</div>
-                ${hintText ? `<div class="generic-hint">💡 ${hintText}</div>` : ''}
+                ${hasTp ? `
+                  <div class="sp-content generic-question-sp">${renderFn(questionText)}</div>
+                  <div class="tp-latin generic-question-text">${questionText}</div>
+                ` : `
+                  <div class="always-visible generic-question-text">${questionText}</div>
+                `}
+                ${hintText ? `<div class="always-visible generic-hint">💡 ${hintText}</div>` : ''}
                 <div class="generic-options">
                   ${q.options.map((opt, oi) => `
                     <button class="generic-option-btn" data-value="${oi}">${opt}</button>
@@ -658,7 +716,7 @@ function renderGenericExercise(exercise, index) {
                 </div>
                 <div class="generic-feedback hidden">
                   <div class="generic-result"></div>
-                  ${explanationText ? `<div class="generic-explanation">💡 ${explanationText}</div>` : ''}
+                  ${explanationText ? `<div class="always-visible generic-explanation">💡 ${explanationText}</div>` : ''}
                 </div>
               </div>
             `;
@@ -668,13 +726,18 @@ function renderGenericExercise(exercise, index) {
           return `
             <div class="generic-question flashcard" onclick="this.classList.toggle('flipped')">
               <div class="card-front">
-                <div class="question-text">${questionText || JSON.stringify(q)}</div>
-                ${hintText ? `<div class="generic-hint">💡 ${hintText}</div>` : ''}
+                ${hasTp ? `
+                  <div class="sp-content question-sp">${renderFn(questionText)}</div>
+                  <div class="tp-latin question-text">${questionText}</div>
+                ` : `
+                  <div class="always-visible question-text">${questionText || JSON.stringify(q)}</div>
+                `}
+                ${hintText ? `<div class="always-visible generic-hint">💡 ${hintText}</div>` : ''}
                 <div class="flip-hint">tap to reveal</div>
               </div>
               <div class="card-back">
-                <div class="answer-text">${answerText || 'See answer'}</div>
-                ${explanationText ? `<div class="explanation">💡 ${explanationText}</div>` : ''}
+                <div class="tp-english answer-text">${answerText || 'See answer'}</div>
+                ${explanationText ? `<div class="always-visible explanation">💡 ${explanationText}</div>` : ''}
               </div>
             </div>
           `;
@@ -685,29 +748,33 @@ function renderGenericExercise(exercise, index) {
 }
 
 function renderOpposites(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">↔️ Opposites</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="opposites-cards">
         ${exercise.questions.map((q, qi) => `
-          <div class="opposites-card flashcard" onclick="this.classList.toggle('flipped')">
-            <div class="card-front">
-              <div class="opposite-given">
-                <span class="opposite-tp">${q.given}</span>
-                <span class="opposite-en">${q.en}</span>
+          <div class="opposites-card-v2" onclick="this.classList.toggle('revealed')">
+            <div class="opposites-row">
+              <div class="opposite-side opposite-given-side">
+                <div class="sp-content opposite-sp">${renderFn(q.given)}</div>
+                <div class="tp-latin opposite-latin">${q.given}</div>
+                <div class="tp-english opposite-en">${q.en}</div>
               </div>
-              <div class="opposite-prompt">What's the opposite?</div>
-              <div class="flip-hint">tap to reveal</div>
-            </div>
-            <div class="card-back">
-              <div class="opposite-answer">
-                <span class="opposite-tp">${q.opposite}</span>
-                <span class="opposite-en">${q.oppositeEn}</span>
+              <div class="opposite-divider">
+                <span class="divider-slash">/</span>
+              </div>
+              <div class="opposite-side opposite-answer-side">
+                <div class="sp-content opposite-sp reveal-content">${renderFn(q.opposite)}</div>
+                <div class="tp-latin opposite-latin reveal-content">${q.opposite}</div>
+                <div class="tp-english opposite-en reveal-content">${q.oppositeEn}</div>
+                <div class="opposite-placeholder">?</div>
               </div>
             </div>
+            <div class="always-visible opposite-hint">tap to reveal opposite</div>
           </div>
         `).join('')}
       </div>
@@ -716,26 +783,28 @@ function renderOpposites(exercise, index) {
 }
 
 function renderCompoundVsSentence(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🔍 Compound vs Sentence</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="cvs-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="cvs-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="cvs-sentence">${q.tp}</div>
-              <div class="cvs-prompt">Compound or sentence?</div>
+              <div class="sp-content cvs-sp">${renderFn(q.tp)}</div>
+              <div class="tp-latin cvs-sentence">${q.tp}</div>
+              <div class="always-visible cvs-prompt">Compound or sentence?</div>
               <div class="flip-hint">tap to reveal</div>
             </div>
             <div class="card-back">
-              <div class="cvs-answer">
+              <div class="always-visible cvs-answer">
                 <span class="cvs-type">${q.answer.toUpperCase()}</span>
-                <span class="cvs-meaning">→ ${q.meaning}</span>
+                <span class="tp-english cvs-meaning">→ ${q.meaning}</span>
               </div>
-              <div class="cvs-explanation">💡 ${q.explanation}</div>
+              <div class="always-visible cvs-explanation">💡 ${q.explanation}</div>
             </div>
           </div>
         `).join('')}
@@ -745,24 +814,28 @@ function renderCompoundVsSentence(exercise, index) {
 }
 
 function renderPiNeeded(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">❓ pi or not pi?</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="pi-needed-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="pi-needed-card" data-correct="${q.correct}">
             <div class="pi-options">
               ${q.options.map((opt, oi) => `
-                <button class="pi-option-btn" data-value="${oi}">${opt}</button>
+                <button class="pi-option-btn" data-value="${oi}">
+                  <span class="sp-content">${renderFn(opt)}</span>
+                  <span class="tp-latin">${opt}</span>
+                </button>
               `).join('')}
             </div>
-            <div class="pi-meaning">→ ${q.meaning}</div>
+            <div class="tp-english pi-meaning">→ ${q.meaning}</div>
             <div class="pi-feedback hidden">
               <div class="pi-result"></div>
-              <div class="pi-explanation">${q.explanation}</div>
+              <div class="always-visible pi-explanation">${q.explanation}</div>
             </div>
           </div>
         `).join('')}
@@ -772,29 +845,36 @@ function renderPiNeeded(exercise, index) {
 }
 
 function renderMeaningDifference(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">⚖️ Meaning Difference</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="meaning-diff-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="meaning-diff-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
               <div class="pair-phrases">
-                <div class="phrase-a">${q.pair[0]}</div>
+                <div class="phrase-a">
+                  <span class="sp-content">${renderFn(q.pair[0])}</span>
+                  <span class="tp-latin">${q.pair[0]}</span>
+                </div>
                 <div class="pair-vs">vs</div>
-                <div class="phrase-b">${q.pair[1]}</div>
+                <div class="phrase-b">
+                  <span class="sp-content">${renderFn(q.pair[1])}</span>
+                  <span class="tp-latin">${q.pair[1]}</span>
+                </div>
               </div>
               <div class="flip-hint">tap to see the difference</div>
             </div>
             <div class="card-back">
               <div class="meanings-comparison">
-                <div class="meaning-a"><strong>${q.pair[0]}:</strong> ${q.meanings[0]}</div>
-                <div class="meaning-b"><strong>${q.pair[1]}:</strong> ${q.meanings[1]}</div>
+                <div class="meaning-a"><strong class="tp-latin">${q.pair[0]}:</strong> <span class="tp-english">${q.meanings[0]}</span></div>
+                <div class="meaning-b"><strong class="tp-latin">${q.pair[1]}:</strong> <span class="tp-english">${q.meanings[1]}</span></div>
               </div>
-              <div class="diff-explanation">💡 ${q.explanation}</div>
+              <div class="always-visible diff-explanation">💡 ${q.explanation}</div>
             </div>
           </div>
         `).join('')}
@@ -804,23 +884,25 @@ function renderMeaningDifference(exercise, index) {
 }
 
 function renderTranslateToPi(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">📝 Translate with pi</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
-      ${exercise.notes ? `<p class="exercise-notes">💡 ${exercise.notes}</p>` : ''}
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
+      ${exercise.notes ? `<p class="always-visible exercise-notes">💡 ${exercise.notes}</p>` : ''}
       <div class="translate-pi-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="translate-pi-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="translate-english">${q.en}</div>
-              <div class="translate-hint">💡 ${q.hint}</div>
+              <div class="always-visible translate-english">${q.en}</div>
+              <div class="always-visible translate-hint">💡 ${q.hint}</div>
               <div class="flip-hint">tap to reveal</div>
             </div>
             <div class="card-back">
-              <div class="translate-answer">${q.answer}</div>
+              <div class="sp-content translate-answer-sp">${renderFn(q.answer)}</div>
+              <div class="tp-latin translate-answer">${q.answer}</div>
             </div>
           </div>
         `).join('')}
@@ -830,22 +912,31 @@ function renderTranslateToPi(exercise, index) {
 }
 
 function renderErrorCorrection(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">✅ Error Correction</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="error-correction-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="error-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="error-wrong">❌ ${q.wrong}</div>
+              <div class="error-wrong">
+                <span class="error-icon">❌</span>
+                <span class="sp-content">${renderFn(q.wrong)}</span>
+                <span class="tp-latin">${q.wrong}</span>
+              </div>
               <div class="flip-hint">tap to see correction</div>
             </div>
             <div class="card-back">
-              <div class="error-correct">✓ ${q.correct}</div>
-              <div class="error-explanation">💡 ${q.explanation}</div>
+              <div class="error-correct">
+                <span class="error-icon">✓</span>
+                <span class="sp-content">${renderFn(q.correct)}</span>
+                <span class="tp-latin">${q.correct}</span>
+              </div>
+              <div class="always-visible error-explanation">💡 ${q.explanation}</div>
             </div>
           </div>
         `).join('')}
@@ -857,16 +948,20 @@ function renderErrorCorrection(exercise, index) {
 // ============ LESSON 10 (la) EXERCISE RENDERERS ============
 
 function renderLaUsage(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🎯 la Usage</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="la-usage-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="la-usage-card" data-correct="${q.correct}">
-            <div class="la-sentence">${q.tp}</div>
+            <div class="la-sentence">
+              <div class="sp-content">${renderFn(q.tp)}</div>
+              <div class="tp-latin">${q.tp}</div>
+            </div>
             <div class="la-options">
               ${q.options.map((opt, oi) => `
                 <button class="la-option-btn" data-value="${oi}">${opt}</button>
@@ -874,7 +969,7 @@ function renderLaUsage(exercise, index) {
             </div>
             <div class="la-feedback hidden">
               <div class="la-result"></div>
-              <div class="la-explanation">${q.explanation}</div>
+              <div class="always-visible la-explanation">${q.explanation}</div>
             </div>
           </div>
         `).join('')}
@@ -884,22 +979,24 @@ function renderLaUsage(exercise, index) {
 }
 
 function renderTranslateLa(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">📝 Translate with la</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="translate-la-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="translate-la-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="translate-english">${q.en}</div>
-              <div class="translate-hint">💡 ${q.hint}</div>
+              <div class="always-visible translate-english">${q.en}</div>
+              <div class="always-visible translate-hint">💡 ${q.hint}</div>
               <div class="flip-hint">tap to reveal</div>
             </div>
             <div class="card-back">
-              <div class="translate-answer">${q.answer}</div>
+              <div class="sp-content translate-answer-sp">${renderFn(q.answer)}</div>
+              <div class="tp-latin translate-answer">${q.answer}</div>
             </div>
           </div>
         `).join('')}
@@ -909,16 +1006,20 @@ function renderTranslateLa(exercise, index) {
 }
 
 function renderTasoPosition(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🔀 taso Meaning</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="taso-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="taso-card" data-correct="${q.correct}">
-            <div class="taso-sentence">${q.tp}</div>
+            <div class="taso-sentence">
+              <div class="sp-content">${renderFn(q.tp)}</div>
+              <div class="tp-latin">${q.tp}</div>
+            </div>
             <div class="taso-options">
               ${q.options.map((opt, oi) => `
                 <button class="taso-option-btn" data-value="${oi}">${opt}</button>
@@ -926,7 +1027,7 @@ function renderTasoPosition(exercise, index) {
             </div>
             <div class="taso-feedback hidden">
               <div class="taso-result"></div>
-              <div class="taso-explanation">${q.explanation}</div>
+              <div class="always-visible taso-explanation">${q.explanation}</div>
             </div>
           </div>
         `).join('')}
@@ -936,16 +1037,20 @@ function renderTasoPosition(exercise, index) {
 }
 
 function renderTimePhrases(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">⏰ Time Phrases</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="time-phrase-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="time-phrase-card" data-correct="${q.correct}">
-            <div class="time-tp">${q.tp}</div>
+            <div class="time-tp">
+              <div class="sp-content">${renderFn(q.tp)}</div>
+              <div class="tp-latin">${q.tp}</div>
+            </div>
             <div class="time-options">
               ${q.options.map((opt, oi) => `
                 <button class="time-option-btn" data-value="${oi}">${opt}</button>
@@ -964,23 +1069,27 @@ function renderTimePhrases(exercise, index) {
 // ============ LESSON 11 (seme) EXERCISE RENDERERS ============
 
 function renderSemePosition(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">❓ seme Position</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="seme-position-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="seme-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="seme-question">${q.question}</div>
+              <div class="always-visible seme-question">${q.question}</div>
               <div class="flip-hint">tap to see answer</div>
             </div>
             <div class="card-back">
-              <div class="seme-answer">${q.answer}</div>
-              <div class="seme-position">Position: ${q.position}</div>
-              <div class="seme-explanation">💡 ${q.explanation}</div>
+              <div class="seme-answer">
+                <div class="sp-content">${renderFn(q.answer)}</div>
+                <div class="tp-latin">${q.answer}</div>
+              </div>
+              <div class="always-visible seme-position">Position: ${q.position}</div>
+              <div class="always-visible seme-explanation">💡 ${q.explanation}</div>
             </div>
           </div>
         `).join('')}
@@ -990,22 +1099,24 @@ function renderSemePosition(exercise, index) {
 }
 
 function renderTranslateQuestion(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">📝 Translate Questions</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="translate-q-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="translate-q-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="translate-english">${q.en}</div>
-              <div class="translate-hint">💡 ${q.hint}</div>
+              <div class="always-visible translate-english">${q.en}</div>
+              <div class="always-visible translate-hint">💡 ${q.hint}</div>
               <div class="flip-hint">tap to reveal</div>
             </div>
             <div class="card-back">
-              <div class="translate-answer">${q.answer}</div>
+              <div class="sp-content translate-answer-sp">${renderFn(q.answer)}</div>
+              <div class="tp-latin translate-answer">${q.answer}</div>
             </div>
           </div>
         `).join('')}
@@ -1015,12 +1126,13 @@ function renderTranslateQuestion(exercise, index) {
 }
 
 function renderAnswerQuestion(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">💬 Answer the Question</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="answer-q-cards">
         ${exercise.questions.map((q, qi) => {
           // Handle both lesson 8 format (correctAnswers array) and lesson 11 format (answer string)
@@ -1028,13 +1140,19 @@ function renderAnswerQuestion(exercise, index) {
           return `
           <div class="answer-q-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="the-question">${q.question}</div>
-              <div class="the-scenario">🎬 ${q.scenario}</div>
+              <div class="the-question">
+                <div class="sp-content">${renderFn(q.question)}</div>
+                <div class="tp-latin">${q.question}</div>
+              </div>
+              <div class="always-visible the-scenario">🎬 ${q.scenario}</div>
               <div class="flip-hint">tap to see answer</div>
             </div>
             <div class="card-back">
-              <div class="the-answer">${answerText}</div>
-              ${q.explanation ? `<div class="answer-explanation">💡 ${q.explanation}</div>` : ''}
+              <div class="the-answer">
+                <div class="sp-content">${renderFn(answerText)}</div>
+                <div class="tp-latin">${answerText}</div>
+              </div>
+              ${q.explanation ? `<div class="always-visible answer-explanation">💡 ${q.explanation}</div>` : ''}
             </div>
           </div>
         `;
@@ -1045,16 +1163,20 @@ function renderAnswerQuestion(exercise, index) {
 }
 
 function renderQuestionType(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🏷️ Question Type</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="question-type-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="qtype-card" data-correct="${q.correct}">
-            <div class="qtype-sentence">${q.tp}</div>
+            <div class="qtype-sentence">
+              <div class="sp-content">${renderFn(q.tp)}</div>
+              <div class="tp-latin">${q.tp}</div>
+            </div>
             <div class="qtype-options">
               ${q.options.map((opt, oi) => `
                 <button class="qtype-option-btn" data-value="${oi}">${opt}</button>
@@ -1071,22 +1193,26 @@ function renderQuestionType(exercise, index) {
 }
 
 function renderNumberPractice(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🔢 Number Practice</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="number-practice-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="number-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="number-tp">${q.tp}</div>
+              <div class="number-tp">
+                <div class="sp-content">${renderFn(q.tp)}</div>
+                <div class="tp-latin">${q.tp}</div>
+              </div>
               <div class="flip-hint">tap to see number</div>
             </div>
             <div class="card-back">
-              <div class="number-answer">${q.answer}</div>
-              <div class="number-explanation">💡 ${q.explanation}</div>
+              <div class="always-visible number-answer">${q.answer}</div>
+              <div class="always-visible number-explanation">💡 ${q.explanation}</div>
             </div>
           </div>
         `).join('')}
@@ -1098,16 +1224,20 @@ function renderNumberPractice(exercise, index) {
 // ============ LESSON 12 (o) EXERCISE RENDERERS ============
 
 function renderCommandType(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">📣 Command Type</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="command-type-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="cmd-card" data-correct="${q.correct}">
-            <div class="cmd-sentence">${q.tp}</div>
+            <div class="cmd-sentence">
+              <div class="sp-content">${renderFn(q.tp)}</div>
+              <div class="tp-latin">${q.tp}</div>
+            </div>
             <div class="cmd-options">
               ${q.options.map((opt, oi) => `
                 <button class="cmd-option-btn" data-value="${oi}">${opt}</button>
@@ -1115,7 +1245,7 @@ function renderCommandType(exercise, index) {
             </div>
             <div class="cmd-feedback hidden">
               <div class="cmd-result"></div>
-              ${q.explanation ? `<div class="cmd-explanation">${q.explanation}</div>` : ''}
+              ${q.explanation ? `<div class="always-visible cmd-explanation">${q.explanation}</div>` : ''}
             </div>
           </div>
         `).join('')}
@@ -1125,22 +1255,24 @@ function renderCommandType(exercise, index) {
 }
 
 function renderTranslateCommand(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">📝 Translate Commands</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="translate-cmd-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="translate-cmd-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="cmd-english">${q.en}</div>
-              ${q.hint ? `<div class="cmd-hint">💡 ${q.hint}</div>` : ''}
+              <div class="always-visible cmd-english">${q.en}</div>
+              ${q.hint ? `<div class="always-visible cmd-hint">💡 ${q.hint}</div>` : ''}
               <div class="flip-hint">tap to reveal</div>
             </div>
             <div class="card-back">
-              <div class="cmd-answer">${q.answer}</div>
+              <div class="sp-content cmd-answer-sp">${renderFn(q.answer)}</div>
+              <div class="tp-latin cmd-answer">${q.answer}</div>
             </div>
           </div>
         `).join('')}
@@ -1150,16 +1282,20 @@ function renderTranslateCommand(exercise, index) {
 }
 
 function renderOPosition(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🔀 o Position</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="o-position-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="o-card" data-correct="${q.correct}">
-            <div class="o-sentence">${q.tp}</div>
+            <div class="o-sentence">
+              <div class="sp-content">${renderFn(q.tp)}</div>
+              <div class="tp-latin">${q.tp}</div>
+            </div>
             <div class="o-options">
               ${q.options.map((opt, oi) => `
                 <button class="o-option-btn" data-value="${oi}">${opt}</button>
@@ -1167,7 +1303,7 @@ function renderOPosition(exercise, index) {
             </div>
             <div class="o-feedback hidden">
               <div class="o-result"></div>
-              ${q.explanation ? `<div class="o-explanation">${q.explanation}</div>` : ''}
+              ${q.explanation ? `<div class="always-visible o-explanation">${q.explanation}</div>` : ''}
             </div>
           </div>
         `).join('')}
@@ -1177,25 +1313,37 @@ function renderOPosition(exercise, index) {
 }
 
 function renderEnUsage(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🔗 en Usage</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="en-usage-cards">
-        ${exercise.questions.map((q, qi) => `
+        ${exercise.questions.map((q, qi) => {
+          const sentenceText = q.tp || q.en || '';
+          const answerText = q.answer || q.correct || '';
+          const hasTp = q.tp;
+          return `
           <div class="en-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="en-sentence">${q.tp || q.en}</div>
+              ${hasTp ? `
+                <div class="sp-content">${renderFn(sentenceText)}</div>
+                <div class="tp-latin">${sentenceText}</div>
+              ` : `
+                <div class="always-visible">${sentenceText}</div>
+              `}
               <div class="flip-hint">tap to reveal</div>
             </div>
             <div class="card-back">
-              <div class="en-answer">${q.answer || q.correct}</div>
-              ${q.explanation ? `<div class="en-explanation">💡 ${q.explanation}</div>` : ''}
+              <div class="sp-content">${renderFn(answerText)}</div>
+              <div class="tp-latin en-answer">${answerText}</div>
+              ${q.explanation ? `<div class="always-visible en-explanation">💡 ${q.explanation}</div>` : ''}
             </div>
           </div>
-        `).join('')}
+        `;
+        }).join('')}
       </div>
     </div>
   `;
@@ -1204,23 +1352,32 @@ function renderEnUsage(exercise, index) {
 // ============ LESSON 5 EXERCISE RENDERERS ============
 
 function renderWordOrderCorrection(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🔄 Word Order</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="word-order-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="word-order-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="wrong-order">❌ ${q.wrong}</div>
-              <div class="prompt-text">"${q.prompt}"</div>
+              <div class="wrong-order">
+                <span class="error-icon">❌</span>
+                <span class="sp-content">${renderFn(q.wrong)}</span>
+                <span class="tp-latin">${q.wrong}</span>
+              </div>
+              <div class="always-visible prompt-text">"${q.prompt}"</div>
               <div class="flip-hint">tap to see correct form</div>
             </div>
             <div class="card-back">
-              <div class="correct-order">✓ ${q.correct}</div>
-              <div class="order-explanation">💡 ${q.explanation}</div>
+              <div class="correct-order">
+                <span class="error-icon">✓</span>
+                <span class="sp-content">${renderFn(q.correct)}</span>
+                <span class="tp-latin">${q.correct}</span>
+              </div>
+              <div class="always-visible order-explanation">💡 ${q.explanation}</div>
             </div>
           </div>
         `).join('')}
@@ -1230,29 +1387,36 @@ function renderWordOrderCorrection(exercise, index) {
 }
 
 function renderModifierOrderMeaning(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">⚖️ Order Matters</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="modifier-order-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="modifier-order-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
               <div class="pair-phrases">
-                <div class="phrase-a">${q.pair[0]}</div>
+                <div class="phrase-a">
+                  <span class="sp-content">${renderFn(q.pair[0])}</span>
+                  <span class="tp-latin">${q.pair[0]}</span>
+                </div>
                 <div class="pair-vs">vs</div>
-                <div class="phrase-b">${q.pair[1]}</div>
+                <div class="phrase-b">
+                  <span class="sp-content">${renderFn(q.pair[1])}</span>
+                  <span class="tp-latin">${q.pair[1]}</span>
+                </div>
               </div>
               <div class="flip-hint">tap to see meanings</div>
             </div>
             <div class="card-back">
               <div class="meanings-comparison">
-                <div class="meaning-a"><strong>${q.pair[0]}:</strong> ${q.meanings[0]}</div>
-                <div class="meaning-b"><strong>${q.pair[1]}:</strong> ${q.meanings[1]}</div>
+                <div class="meaning-a"><strong class="tp-latin">${q.pair[0]}:</strong> <span class="tp-english">${q.meanings[0]}</span></div>
+                <div class="meaning-b"><strong class="tp-latin">${q.pair[1]}:</strong> <span class="tp-english">${q.meanings[1]}</span></div>
               </div>
-              <div class="order-explanation">💡 ${q.explanation}</div>
+              <div class="always-visible order-explanation">💡 ${q.explanation}</div>
             </div>
           </div>
         `).join('')}
@@ -1262,22 +1426,24 @@ function renderModifierOrderMeaning(exercise, index) {
 }
 
 function renderCompoundCreation(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🧩 Compound Creation</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="compound-creation-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="compound-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="compound-concept">${q.concept}</div>
-              ${q.hint ? `<div class="compound-hint">💡 ${q.hint}</div>` : ''}
+              <div class="always-visible compound-concept">${q.concept}</div>
+              ${q.hint ? `<div class="always-visible compound-hint">💡 ${q.hint}</div>` : ''}
               <div class="flip-hint">tap to reveal</div>
             </div>
             <div class="card-back">
-              <div class="compound-answer">${q.answer}</div>
+              <div class="sp-content compound-answer-sp">${renderFn(q.answer)}</div>
+              <div class="tp-latin compound-answer">${q.answer}</div>
             </div>
           </div>
         `).join('')}
@@ -1287,22 +1453,26 @@ function renderCompoundCreation(exercise, index) {
 }
 
 function renderTimeMatching(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">⏰ Time Expressions</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="time-matching-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="time-match-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="time-tp">${q.tp}</div>
-              ${q.hint ? `<div class="time-hint">💡 ${q.hint}</div>` : ''}
+              <div class="time-tp">
+                <div class="sp-content">${renderFn(q.tp)}</div>
+                <div class="tp-latin">${q.tp}</div>
+              </div>
+              ${q.hint ? `<div class="always-visible time-hint">💡 ${q.hint}</div>` : ''}
               <div class="flip-hint">tap to reveal meaning</div>
             </div>
             <div class="card-back">
-              <div class="time-en">${q.en}</div>
+              <div class="tp-english time-en">${q.en}</div>
             </div>
           </div>
         `).join('')}
@@ -1314,16 +1484,17 @@ function renderTimeMatching(exercise, index) {
 // ============ LESSON 6 EXERCISE RENDERERS ============
 
 function renderPrepositionChoice(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🎯 Preposition Choice</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="preposition-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="preposition-card" data-correct="${q.correct}">
-            <div class="prep-prompt">${q.prompt}</div>
+            <div class="always-visible prep-prompt">${q.prompt}</div>
             <div class="prep-options">
               ${q.options.map((opt, oi) => `
                 <button class="prep-option-btn" data-value="${oi}">${opt}</button>
@@ -1331,8 +1502,11 @@ function renderPrepositionChoice(exercise, index) {
             </div>
             <div class="prep-feedback hidden">
               <div class="prep-result"></div>
-              <div class="prep-answer">${q.answer}</div>
-              <div class="prep-explanation">💡 ${q.explanation}</div>
+              <div class="prep-answer">
+                <span class="sp-content">${renderFn(q.answer)}</span>
+                <span class="tp-latin">${q.answer}</span>
+              </div>
+              <div class="always-visible prep-explanation">💡 ${q.explanation}</div>
             </div>
           </div>
         `).join('')}
@@ -1342,22 +1516,24 @@ function renderPrepositionChoice(exercise, index) {
 }
 
 function renderOpinionPattern(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">💭 Opinion Pattern</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="opinion-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="opinion-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="opinion-english">${q.english}</div>
+              <div class="always-visible opinion-english">${q.english}</div>
               <div class="flip-hint">tap to reveal toki pona</div>
             </div>
             <div class="card-back">
-              <div class="opinion-answer">${q.answer}</div>
-              ${q.note ? `<div class="opinion-note">💡 ${q.note}</div>` : ''}
+              <div class="sp-content opinion-answer-sp">${renderFn(q.answer)}</div>
+              <div class="tp-latin opinion-answer">${q.answer}</div>
+              ${q.note ? `<div class="always-visible opinion-note">💡 ${q.note}</div>` : ''}
             </div>
           </div>
         `).join('')}
@@ -1367,27 +1543,30 @@ function renderOpinionPattern(exercise, index) {
 }
 
 function renderTransformSentence(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🔄 Transform Sentences</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="transform-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="transform-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
               <div class="transform-original">
-                <span class="transform-label">Intransitive:</span>
-                <span class="transform-sentence">${q.intransitive}</span>
+                <span class="always-visible transform-label">Intransitive:</span>
+                <span class="sp-content">${renderFn(q.intransitive)}</span>
+                <span class="tp-latin transform-sentence">${q.intransitive}</span>
               </div>
-              <div class="transform-hint">💡 ${q.note}</div>
+              <div class="always-visible transform-hint">💡 ${q.note}</div>
               <div class="flip-hint">tap to see transitive form</div>
             </div>
             <div class="card-back">
               <div class="transform-result">
-                <span class="transform-label">Transitive:</span>
-                <span class="transform-sentence">${q.transitive}</span>
+                <span class="always-visible transform-label">Transitive:</span>
+                <span class="sp-content">${renderFn(q.transitive)}</span>
+                <span class="tp-latin transform-sentence">${q.transitive}</span>
               </div>
             </div>
           </div>
@@ -1398,18 +1577,23 @@ function renderTransformSentence(exercise, index) {
 }
 
 function renderRoleIdentification(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🎯 Role Identification</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="exercise-questions">
-        ${exercise.questions.map((q, qi) => `
+        ${exercise.questions.map((q, qi) => {
+          // Render sentence with highlighted target
+          const highlightedTp = q.tp.replace(`**${q.target}**`, `<mark>${q.target}</mark>`);
+          return `
           <div class="role-question-card" data-question="${qi}" data-correct="${q.correct}">
             <div class="question-prompt">
-              <div class="question-sentence">${q.tp.replace(`**${q.target}**`, `<mark>${q.target}</mark>`)}</div>
-              <div class="question-translation">"${q.en}"</div>
+              <div class="sp-content question-sp">${renderFn(q.tp.replace(/\*\*/g, ''))}</div>
+              <div class="tp-latin question-sentence">${highlightedTp}</div>
+              <div class="tp-english question-translation">"${q.en}"</div>
             </div>
             <div class="options-grid">
               ${q.options.map((opt, oi) => `
@@ -1418,22 +1602,24 @@ function renderRoleIdentification(exercise, index) {
             </div>
             <div class="feedback hidden">
               <div class="feedback-icon"></div>
-              <div class="feedback-explanation">${q.explanation}</div>
+              <div class="always-visible feedback-explanation">${q.explanation}</div>
             </div>
           </div>
-        `).join('')}
+        `;
+        }).join('')}
       </div>
     </div>
   `;
 }
 
 function renderTranslationVariation(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🔄 Translation Practice</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="translation-cards">
         ${exercise.questions.map((q, qi) => {
           // Support two formats:
@@ -1446,13 +1632,14 @@ function renderTranslationVariation(exercise, index) {
           return `
           <div class="translation-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="trans-tp">${q.tp}</div>
-              ${typeHint ? `<div class="trans-type">${typeHint}</div>` : ''}
-              ${hint ? `<div class="trans-hint">💡 ${hint}</div>` : ''}
+              <div class="sp-content trans-sp">${renderFn(q.tp)}</div>
+              <div class="tp-latin trans-tp">${q.tp}</div>
+              ${typeHint ? `<div class="always-visible trans-type">${typeHint}</div>` : ''}
+              ${hint ? `<div class="always-visible trans-hint">💡 ${hint}</div>` : ''}
               <div class="flip-hint">tap to reveal</div>
             </div>
             <div class="card-back">
-              <div class="trans-answer">${answer}</div>
+              <div class="tp-english trans-answer">${answer}</div>
             </div>
           </div>
         `;
@@ -1463,28 +1650,30 @@ function renderTranslationVariation(exercise, index) {
 }
 
 function renderSentenceBuilding(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🧱 Sentence Building</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="building-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="building-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="word-bank">
+              <div class="always-visible word-bank">
                 ${q.words.map(w => `<span class="word-chip">${w}</span>`).join('')}
               </div>
-              <div class="building-hint">💡 ${q.hint}</div>
+              <div class="always-visible building-hint">💡 ${q.hint}</div>
               <div class="flip-hint">tap to see answers</div>
             </div>
             <div class="card-back">
               <div class="valid-answers">
                 ${q.validAnswers.map((a, ai) => `
                   <div class="answer-option">
-                    <span class="answer-tp">${a}</span>
-                    <span class="answer-en">→ ${q.translations[ai]}</span>
+                    <span class="sp-content answer-sp">${renderFn(a)}</span>
+                    <span class="tp-latin answer-tp">${a}</span>
+                    <span class="tp-english answer-en">→ ${q.translations[ai]}</span>
                   </div>
                 `).join('')}
               </div>
@@ -1497,12 +1686,13 @@ function renderSentenceBuilding(exercise, index) {
 }
 
 function renderDisambiguation(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">🤔 Disambiguation</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="disambig-cards">
         ${exercise.questions.map((q, qi) => {
           // Handle three different formats:
@@ -1518,8 +1708,9 @@ function renderDisambiguation(exercise, index) {
             return `
               <div class="disambig-card flashcard" onclick="this.classList.toggle('flipped')">
                 <div class="card-front">
-                  <div class="disambig-sentence">${q.tp}</div>
-                  <div class="disambig-meanings">
+                  <div class="sp-content disambig-sp">${renderFn(q.tp)}</div>
+                  <div class="tp-latin disambig-sentence">${q.tp}</div>
+                  <div class="always-visible disambig-meanings">
                     ${q.meanings.map((m, i) => `<div class="ambig-option">${i + 1}. ${m}</div>`).join('')}
                   </div>
                   <div class="flip-hint">tap to see clarifications</div>
@@ -1528,11 +1719,11 @@ function renderDisambiguation(exercise, index) {
                   <div class="clarifications">
                     ${Object.entries(q.clarifications).map(([key, val]) => `
                       <div class="clarification-item">
-                        <strong>${key}:</strong> ${val}
+                        <strong class="tp-latin">${key}:</strong> <span class="clarification-en">${val}</span>
                       </div>
                     `).join('')}
                   </div>
-                  <div class="disambig-explanation">💡 ${q.explanation}</div>
+                  <div class="always-visible disambig-explanation">💡 ${q.explanation}</div>
                 </div>
               </div>
             `;
@@ -1541,17 +1732,18 @@ function renderDisambiguation(exercise, index) {
             return `
               <div class="disambig-card flashcard" onclick="this.classList.toggle('flipped')">
                 <div class="card-front">
-                  <div class="disambig-sentence">${q.tp}</div>
-                  <div class="disambig-prompt">Can you think of ${q.meanings} meanings?</div>
+                  <div class="sp-content disambig-sp">${renderFn(q.tp)}</div>
+                  <div class="tp-latin disambig-sentence">${q.tp}</div>
+                  <div class="always-visible disambig-prompt">Can you think of ${q.meanings} meanings?</div>
                   <div class="flip-hint">tap to reveal</div>
                 </div>
                 <div class="card-back">
-                  <div class="meanings-list">
+                  <div class="tp-english meanings-list">
                     ${q.answers.map((a, i) => `<div class="meaning-item">${i + 1}. ${a}</div>`).join('')}
                   </div>
                   <div class="followup-section">
-                    <div class="followup-q">${q.followUp}</div>
-                    <div class="followup-a">${q.likelyAnswer}</div>
+                    <div class="always-visible followup-q">${q.followUp}</div>
+                    <div class="always-visible followup-a">${q.likelyAnswer}</div>
                   </div>
                 </div>
               </div>
@@ -1561,16 +1753,17 @@ function renderDisambiguation(exercise, index) {
             return `
               <div class="disambig-card flashcard" onclick="this.classList.toggle('flipped')">
                 <div class="card-front">
-                  <div class="disambig-sentence">${q.tp}</div>
-                  <div class="disambig-meanings">
+                  <div class="sp-content disambig-sp">${renderFn(q.tp)}</div>
+                  <div class="tp-latin disambig-sentence">${q.tp}</div>
+                  <div class="always-visible disambig-meanings">
                     ${q.ambiguous.map((a, i) => `<div class="ambig-option">${i + 1}. ${a}</div>`).join('')}
                   </div>
-                  <div class="disambig-prompt">${q.prompt}</div>
+                  <div class="always-visible disambig-prompt">${q.prompt}</div>
                   <div class="flip-hint">tap to reveal</div>
                 </div>
                 <div class="card-back">
-                  <div class="disambig-answer">💡 ${q.answer}</div>
-                  <div class="disambig-explanation">${q.explanation}</div>
+                  <div class="always-visible disambig-answer">💡 ${q.answer}</div>
+                  <div class="always-visible disambig-explanation">${q.explanation}</div>
                 </div>
               </div>
             `;
@@ -1584,12 +1777,13 @@ function renderDisambiguation(exercise, index) {
 }
 
 function renderFillBlank(exercise, index) {
+  const renderFn = useCompounds ? renderSentenceCompound : renderSentence;
   return `
     <div class="exercise-block" data-exercise="${index}">
       <div class="exercise-header">
         <span class="exercise-type">✏️ Fill in the Blank</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="fillblank-cards">
         ${exercise.questions.map((q, qi) => {
           // Support both formats: 
@@ -1599,17 +1793,19 @@ function renderFillBlank(exercise, index) {
           const translation = q.en || q.context || '';
           const hint = q.hint || q.explanation || '';
           const answer = q.answer || '';
+          const completedSentence = sentence.replace('_____', answer);
           
           return `
           <div class="fillblank-card flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="fillblank-sentence">${sentence.replace('_____', '<span class="blank-slot">?</span>')}</div>
-              <div class="fillblank-english">"${translation}"</div>
-              ${hint ? `<div class="fillblank-hint">💡 ${hint}</div>` : ''}
+              <div class="tp-latin fillblank-sentence">${sentence.replace('_____', '<span class="blank-slot">?</span>')}</div>
+              <div class="tp-english fillblank-english">"${translation}"</div>
+              ${hint ? `<div class="always-visible fillblank-hint">💡 ${hint}</div>` : ''}
               <div class="flip-hint">tap to reveal</div>
             </div>
             <div class="card-back">
-              <div class="fillblank-answer">${sentence.replace('_____', `<span class="filled-answer">${answer}</span>`)}</div>
+              <div class="sp-content fillblank-answer-sp">${renderFn(completedSentence)}</div>
+              <div class="tp-latin fillblank-answer">${sentence.replace('_____', `<span class="filled-answer">${answer}</span>`)}</div>
             </div>
           </div>
         `;
@@ -1625,18 +1821,18 @@ function renderTrueFalse(exercise, index) {
       <div class="exercise-header">
         <span class="exercise-type">✓✗ True or False</span>
       </div>
-      <p class="exercise-instruction">${exercise.instruction}</p>
+      <p class="always-visible exercise-instruction">${exercise.instruction}</p>
       <div class="tf-cards">
         ${exercise.questions.map((q, qi) => `
           <div class="tf-card" data-answer="${q.answer}">
-            <div class="tf-statement">"${q.statement}"</div>
+            <div class="always-visible tf-statement">"${q.statement}"</div>
             <div class="tf-buttons">
               <button class="tf-btn" data-value="true">True</button>
               <button class="tf-btn" data-value="false">False</button>
             </div>
             <div class="tf-feedback hidden">
               <div class="tf-result"></div>
-              <div class="tf-explanation">${q.explanation}</div>
+              <div class="always-visible tf-explanation">${q.explanation}</div>
             </div>
           </div>
         `).join('')}
@@ -1650,37 +1846,37 @@ function renderMiniStory(story, renderFn) {
     <div class="mini-story">
       <div class="story-header">
         <span class="story-icon">📖</span>
-        <span class="story-title">${story.title}</span>
+        <span class="always-visible story-title">${story.title}</span>
       </div>
-      <div class="story-intro">${story.intro}</div>
+      <div class="always-visible story-intro">${story.intro}</div>
       
       <div class="story-paragraphs">
         ${story.paragraphs.map(p => `
           <div class="story-line flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="story-sp">${renderFn(p.tp)}</div>
-              <div class="story-tp">${p.tp}</div>
+              <div class="sp-content story-sp">${renderFn(p.tp)}</div>
+              <div class="tp-latin story-tp">${p.tp}</div>
               <div class="flip-hint">tap to reveal</div>
             </div>
             <div class="card-back">
-              <div class="story-en">${p.en}</div>
-              ${p.note ? `<div class="story-note">💡 ${p.note}</div>` : ''}
+              <div class="tp-english story-en">${p.en}</div>
+              ${p.note ? `<div class="always-visible story-note">💡 ${p.note}</div>` : ''}
             </div>
           </div>
         `).join('')}
       </div>
       
       <div class="comprehension-section">
-        <div class="comp-header">📋 Comprehension Check</div>
+        <div class="always-visible comp-header">📋 Comprehension Check</div>
         ${story.comprehension.map((q, i) => `
           <div class="comp-question flashcard" onclick="this.classList.toggle('flipped')">
             <div class="card-front">
-              <div class="comp-q">${i + 1}. ${q.question}</div>
+              <div class="always-visible comp-q">${i + 1}. ${q.question}</div>
               <div class="flip-hint">tap to reveal</div>
             </div>
             <div class="card-back">
-              <div class="comp-a"><strong>Answer:</strong> ${q.answer}</div>
-              <div class="comp-evidence"><em>Evidence:</em> "${q.evidence}"</div>
+              <div class="always-visible comp-a"><strong>Answer:</strong> ${q.answer}</div>
+              <div class="always-visible comp-evidence"><em>Evidence:</em> "${q.evidence}"</div>
             </div>
           </div>
         `).join('')}
@@ -1689,7 +1885,7 @@ function renderMiniStory(story, renderFn) {
       ${story.challenge ? `
         <div class="story-challenge">
           <span class="challenge-icon">🌟</span>
-          <span class="challenge-text">${story.challenge}</span>
+          <span class="always-visible challenge-text">${story.challenge}</span>
         </div>
       ` : ''}
     </div>
@@ -1904,19 +2100,19 @@ function renderLesson() {
     <div class="vocab-grid">
       ${lesson.vocab.map(v => `
         <div class="vocab-item">
-          <span class="sp-glyph-hybrid">${toSP(v.word)}</span>
-          <div class="word">${v.word}</div>
-          <div class="meaning">${v.meaning}</div>
+          <span class="sp-content sp-glyph-hybrid">${toSP(v.word)}</span>
+          <div class="vocab-word-always">${v.word}</div>
+          <div class="always-visible meaning">${v.meaning}</div>
         </div>
       `).join('')}
     </div>
     
     <h3 class="section-label">Sentences</h3>
     ${lesson.sentences.map(s => `
-      <div class="card flashcard ${showEnglish ? 'show-all' : ''}" onclick="this.classList.toggle('flipped')">
-        <div class="sp-sentence">${renderFn(s.tp)}</div>
-        <p class="latin ${showLatin ? '' : 'hidden'}">${s.tp}</p>
-        <p class="english">${s.en}</p>
+      <div class="card flashcard" onclick="this.classList.toggle('flipped')">
+        <div class="sp-content sp-sentence">${renderFn(s.tp)}</div>
+        <p class="tp-latin latin">${s.tp}</p>
+        <p class="tp-english english">${s.en}</p>
         <p class="flip-hint">tap to reveal</p>
       </div>
     `).join('')}
@@ -1924,9 +2120,9 @@ function renderLesson() {
     <h3 class="section-label" style="margin-top: 2rem;">Practice</h3>
     ${lesson.sentences.slice(0, 3).map(s => `
       <div class="card practice" onclick="this.classList.toggle('revealed')">
-        <div class="sp-sentence">${renderFn(s.tp)}</div>
-        <p class="latin reveal">${s.tp}</p>
-        <p class="english reveal">${s.en}</p>
+        <div class="sp-content sp-sentence">${renderFn(s.tp)}</div>
+        <p class="tp-latin latin reveal">${s.tp}</p>
+        <p class="tp-english english reveal">${s.en}</p>
         <p class="flip-hint">tap to reveal</p>
       </div>
     `).join('')}
@@ -1988,18 +2184,21 @@ document.getElementById('levels').addEventListener('click', e => {
 
 document.getElementById('showLatin').addEventListener('change', e => {
   showLatin = e.target.checked;
-  renderLesson();
+  document.body.classList.toggle('show-latin', showLatin);
+  // Save preference
+  saveDisplayPreferences();
 });
 
 document.getElementById('showEnglish').addEventListener('change', e => {
   showEnglish = e.target.checked;
-  document.querySelectorAll('.flashcard').forEach(card => {
-    card.classList.toggle('show-all', showEnglish);
-  });
+  document.body.classList.toggle('show-english', showEnglish);
+  // Save preference
+  saveDisplayPreferences();
 });
 
 document.getElementById('useCompounds').addEventListener('change', e => {
   useCompounds = e.target.checked;
+  saveDisplayPreferences();
   renderLesson();
 });
 
@@ -2132,6 +2331,10 @@ function updateProgressBar() {
 
 // ============ Initialize ============
 
+// Initialize display modes first (loads preferences and sets body classes)
+initializeDisplayModes();
+
+// Then render the UI
 document.getElementById('headerGlyph').textContent = SitelenPona.wordToGlyph('lipu');
 renderNav();
 updateProgressBar();

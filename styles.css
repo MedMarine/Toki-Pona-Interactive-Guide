@@ -1166,6 +1166,144 @@ body {
 }
 
 /* ============================================================================
+ * OPPOSITES EXERCISE V2
+ * ============================================================================ */
+
+.opposites-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.opposites-card-v2 {
+  background: var(--bg-surface);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.opposites-card-v2:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.opposites-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.opposite-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.opposite-given-side {
+  text-align: left;
+}
+
+.opposite-answer-side {
+  text-align: right;
+  position: relative;
+  min-height: 4rem;
+}
+
+.opposite-sp {
+  font-family: 'nasin-nanpa', sans-serif;
+  font-size: 2rem;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.opposite-given-side .opposite-sp {
+  color: var(--accent-bright);
+}
+
+.opposite-answer-side .opposite-sp {
+  color: var(--success);
+}
+
+.opposite-latin {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.opposite-given-side .opposite-latin {
+  color: var(--accent-bright);
+}
+
+.opposite-answer-side .opposite-latin {
+  color: var(--success);
+}
+
+.opposite-en {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.opposite-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+}
+
+.divider-slash {
+  font-size: 2rem;
+  font-weight: 200;
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+
+/* Hidden state for answer side */
+.opposites-card-v2 .reveal-content {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.opposites-card-v2 .opposite-placeholder {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  font-size: 2.5rem;
+  font-weight: 300;
+  color: var(--text-dim);
+  opacity: 0.4;
+  transition: opacity 0.25s ease;
+}
+
+/* Revealed state */
+.opposites-card-v2.revealed .reveal-content {
+  opacity: 1;
+}
+
+.opposites-card-v2.revealed .opposite-placeholder {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.opposite-hint {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  margin-top: 0.75rem;
+  opacity: 0.7;
+  transition: opacity 0.25s ease;
+}
+
+.opposites-card-v2.revealed .opposite-hint {
+  opacity: 0;
+}
+
+/* ============================================================================
  * RESPONSIVE
  * ============================================================================ */
 
@@ -1196,4 +1334,308 @@ body {
   .sp-glyph-large {
     font-size: 2rem;
   }
+  
+  /* Opposites responsive */
+  .opposites-row {
+    gap: 0.5rem;
+  }
+  
+  .opposite-sp {
+    font-size: 1.6rem;
+  }
+  
+  .opposite-latin {
+    font-size: 0.9rem;
+  }
+  
+  .opposite-divider {
+    width: 1.5rem;
+  }
+  
+  .divider-slash {
+    font-size: 1.5rem;
+  }
+  
+  .opposites-card-v2 .opposite-placeholder {
+    font-size: 2rem;
+  }
+}
+
+/* ============================================================================
+ * DISPLAY MODE TOGGLE SYSTEM
+ * Controls visibility of Latin text and English translations site-wide
+ * ============================================================================ */
+
+/*
+ * Class naming convention:
+ * .tp-latin      - Latin script toki pona text (block-level)
+ * .tp-latin-inline - Latin script toki pona text (inline)
+ * .tp-english    - English translations (block-level)
+ * .tp-english-inline - English translations (inline)
+ * .always-visible - Content that should always show (grammar, instructions)
+ * .sp-content    - Sitelen pona glyph content (always visible)
+ */
+
+/* Default state: Latin shown, English hidden */
+/* These will be controlled by body classes */
+
+/* Latin text - shown by default, hidden when body lacks .show-latin */
+.tp-latin,
+.tp-latin-inline {
+  transition: opacity 0.2s ease;
+}
+
+body:not(.show-latin) .tp-latin {
+  display: none !important;
+}
+
+body:not(.show-latin) .tp-latin-inline {
+  display: none !important;
+}
+
+/* English text - hidden by default, shown when body has .show-english */
+.tp-english,
+.tp-english-inline {
+  transition: opacity 0.2s ease;
+}
+
+body:not(.show-english) .tp-english {
+  display: none !important;
+}
+
+body:not(.show-english) .tp-english-inline {
+  display: none !important;
+}
+
+/* Always visible content ignores toggle states */
+.always-visible {
+  display: block !important;
+}
+
+.always-visible-inline {
+  display: inline !important;
+}
+
+/* When a flashcard is flipped/revealed, show English answers regardless of toggle */
+/* This applies to all English content classes used across the app */
+.flashcard.flipped .tp-english,
+.flashcard.flipped .card-back .tp-english,
+.flipped .tp-english,
+.revealed .tp-english,
+.flipped .sentence-english,
+.flipped .story-en,
+.flipped .trans-answer,
+.flipped .meanings-list,
+.flipped .likely-meaning,
+.flipped .time-en,
+.flipped .clarification-en {
+  display: block !important;
+  color: var(--success);
+}
+
+/* Inline English elements in flipped cards */
+.flipped .clarification-en {
+  display: inline !important;
+}
+
+/* When English is globally shown, flashcards should auto-reveal */
+body.show-english .flashcard .card-back {
+  display: block;
+}
+
+body.show-english .flashcard .card-front {
+  display: block;
+}
+
+body.show-english .flashcard .flip-hint {
+  display: none;
+}
+
+/* Override for exercises that need click-to-reveal even with English on */
+.force-reveal .tp-english {
+  display: none !important;
+}
+
+.force-reveal.revealed .tp-english,
+.force-reveal.flipped .tp-english {
+  display: block !important;
+}
+
+body.show-english .force-reveal .tp-english {
+  display: block !important;
+}
+
+/* Styling for Latin text when shown */
+.tp-latin {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.tp-latin-inline {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Styling for English translations when shown */
+.tp-english {
+  color: var(--text-primary);
+}
+
+.tp-english-inline {
+  color: var(--text-primary);
+}
+
+/* Legacy class support - map old classes to new system */
+/* .latin class used in simple lesson format */
+body:not(.show-latin) .latin {
+  display: none !important;
+}
+
+/* .english class used in simple lesson format */
+body:not(.show-english) .card .english {
+  display: none !important;
+}
+
+body.show-english .card .english {
+  display: block !important;
+}
+
+/* Legacy .english class - show when card is flipped/revealed */
+.card.flipped .english,
+.card.revealed .english {
+  display: block !important;
+  color: var(--success);
+}
+
+/* .tp-text class used in reading passages */
+body:not(.show-latin) .tp-text {
+  display: none !important;
+}
+
+/* .en-text class used in reading passages */
+body:not(.show-english) .en-text {
+  display: none !important;
+}
+
+body.show-english .en-text {
+  display: block !important;
+}
+
+/* .tp-proverb class used in proverbs */
+body:not(.show-latin) .tp-proverb {
+  display: none !important;
+}
+
+/* .en-proverb class used in proverbs */
+body:not(.show-english) .en-proverb {
+  display: none !important;
+}
+
+body.show-english .en-proverb {
+  display: block !important;
+}
+
+/* Sentence cards in expanded lessons */
+body:not(.show-latin) .sentence-latin {
+  display: none !important;
+}
+
+body:not(.show-english) .sentence-english {
+  display: none !important;
+}
+
+body.show-english .sentence-english {
+  display: block !important;
+}
+
+/* Story content */
+body:not(.show-latin) .story-tp {
+  display: none !important;
+}
+
+body:not(.show-english) .story-en {
+  display: none !important;
+}
+
+body.show-english .story-en {
+  display: block !important;
+}
+
+/* Flashcard behavior with display modes */
+/* When show-english is on, reveal all flashcard answers */
+body.show-english .flashcard.sentence-card-expanded .card-back,
+body.show-english .flashcard.sentence-card-ambiguous .card-back {
+  display: block;
+}
+
+/* Translation exercise cards */
+body:not(.show-english) .trans-answer {
+  /* Keep hidden until flipped, let flashcard handle it */
+}
+
+body.show-english .translation-card .trans-answer {
+  display: block !important;
+}
+
+body.show-english .translation-card .flip-hint {
+  display: none !important;
+}
+
+/* Answer cards in various exercises */
+body.show-english .fillblank-card .card-back,
+body.show-english .building-card .card-back,
+body.show-english .disambig-card .card-back {
+  display: block;
+}
+
+body.show-english .fillblank-card .flip-hint,
+body.show-english .building-card .flip-hint,
+body.show-english .disambig-card .flip-hint {
+  display: none;
+}
+
+/* Opposites exercise */
+body:not(.show-latin) .opposite-latin {
+  display: none !important;
+}
+
+body:not(.show-english) .opposite-en {
+  display: none !important;
+}
+
+body.show-english .opposite-en {
+  display: block !important;
+}
+
+/* Opposites - show English when revealed */
+.revealed .opposite-en {
+  display: block !important;
+  color: var(--success);
+}
+
+/* Vocab card word - always visible, not italic, white */
+.vocab-word-always {
+  display: block !important;
+  color: var(--text-primary);
+  font-style: normal;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+/* Sitelen pona content wrapper - ensure font is applied */
+.sp-content {
+  font-family: 'nasin-nanpa', sans-serif;
+  font-size: 1.75rem;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+/* sp-word elements - ALWAYS apply the font */
+.sp-word {
+  font-family: 'nasin-nanpa', sans-serif !important;
+}
+
+/* sp-word elements within sp-content */
+.sp-content .sp-word {
+  font-family: 'nasin-nanpa', sans-serif !important;
 }
